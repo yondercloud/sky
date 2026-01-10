@@ -14,7 +14,7 @@ const Astronomy = {
 
     // Calculate Sun position (azimuth and altitude)
     getSunPosition(date, lat, lng) {
-        const lw = -lng * this.RAD;
+        const lw = lng * this.RAD; // FIXED: use lng directly (negative for west, positive for east)
         const phi = lat * this.RAD;
         const d = this.toJulian(date) - this.J2000;
 
@@ -33,7 +33,7 @@ const Astronomy = {
 
     // Calculate Moon position (azimuth and altitude)
     getMoonPosition(date, lat, lng) {
-        const lw = -lng * this.RAD;
+        const lw = lng * this.RAD; // FIXED: use lng directly (negative for west, positive for east)
         const phi = lat * this.RAD;
         const d = this.toJulian(date) - this.J2000;
 
@@ -133,11 +133,12 @@ const Astronomy = {
         };
     },
 
-    // Helper: Get sidereal time
+    // Helper: Get sidereal time (Local Sidereal Time)
     getSiderealTime(d, lw) {
         const degrees = 280.16 + 360.9856235 * d;
-        const normalized = ((degrees % 360) + 360) % 360; // Normalize to 0-360°
-        return normalized * this.RAD - lw;
+        // Normalize GST to 0-360° before converting to radians
+        const gstNorm = ((degrees % 360) + 360) % 360;
+        return gstNorm * this.RAD - lw;
     },
 
     // Helper: Calculate azimuth from hour angle

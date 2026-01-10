@@ -11,7 +11,7 @@ const Astronomy = {
     },
 
     getSunPosition(date, lat, lng) {
-        const lw = -lng * this.RAD;
+        const lw = -lng * this.RAD; // longitude west is positive
         const phi = lat * this.RAD;
         const d = this.toJulian(date) - this.J2000;
 
@@ -51,9 +51,8 @@ const Astronomy = {
     },
 
     getSiderealTime(d, lw) {
-        const degrees = 280.16 + 360.9856235 * d;
-        const normalized = ((degrees % 360) + 360) % 360; // Normalize to 0-360°
-        return normalized * this.RAD + lw; // Changed: + lw to correctly add longitude offset
+        // Based on SunCalc - do NOT normalize before subtracting lw
+        return this.RAD * (280.16 + 360.9856235 * d) - lw;
     },
 
     getAzimuth(H, phi, dec) {
