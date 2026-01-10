@@ -228,12 +228,16 @@
                         <button onclick="app.resetToNow()" class="primary">Now</button>
                     </div>
                     <div class="button-group" style="margin-top: 10px;">
-                        <button onclick="app.adjustTime(-24)">-1 Day</button>
                         <button onclick="app.adjustTime(-1)">-1 Hour</button>
+                        <button onclick="app.adjustTime(1)">+1 Hour</button>
                     </div>
                     <div class="button-group">
-                        <button onclick="app.adjustTime(1)">+1 Hour</button>
+                        <button onclick="app.adjustTime(-24)">-1 Day</button>
                         <button onclick="app.adjustTime(24)">+1 Day</button>
+                    </div>
+                    <div class="button-group">
+                        <button onclick="app.adjustTimeByMonths(-1)">-1 Month</button>
+                        <button onclick="app.adjustTimeByMonths(1)">+1 Month</button>
                     </div>
                 </div>
 

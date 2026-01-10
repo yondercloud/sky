@@ -108,6 +108,28 @@ const app = {
         this.update();
     },
 
+    adjustTimeByMonths(months) {
+        const newDate = new Date(this.currentTime);
+        const originalDay = newDate.getDate();
+        const originalMonth = newDate.getMonth();
+        const originalYear = newDate.getFullYear();
+
+        // Calculate new month and year
+        const newMonth = originalMonth + months;
+        newDate.setMonth(newMonth);
+
+        // Check if the day got adjusted (e.g., Jan 31 -> Feb 31 becomes Mar 3)
+        // If so, we need to set it to the last day of the target month
+        if (newDate.getDate() !== originalDay) {
+            // Set to last day of the target month by going to day 0 of next month
+            newDate.setDate(0);
+        }
+
+        this.currentTime = newDate;
+        this.updateTimeInput();
+        this.update();
+    },
+
     panView(degrees) {
         this.viewAzimuth = ((this.viewAzimuth + degrees) % 360 + 360) % 360;
         this.updateViewAzimuthDisplay();
