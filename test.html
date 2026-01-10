@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sun/Moon Position Tests</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 {
+            color: #ffd700;
+        }
+        .test {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #666;
+        }
+        .test.pass {
+            background: rgba(0, 255, 0, 0.1);
+            border-left-color: #0f0;
+        }
+        .test.fail {
+            background: rgba(255, 0, 0, 0.1);
+            border-left-color: #f00;
+        }
+        .test-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .test-detail {
+            font-size: 12px;
+            color: #aaa;
+            margin-left: 20px;
+        }
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sun & Moon Position Test Suite</h1>
+    <div id="results"></div>
+    <div id="summary" class="summary"></div>
+
+    <script src="astronomy.js"></script>
+    <script>
+        // Test utilities
+        const tests = [];
+        let passed = 0;
+        let failed = 0;
+
+        function test(name, fn) {
+            try {
+                const result = fn();
+                if (result.pass) {
+                    passed++;
+                    logTest(name, true, result.message);
+                } else {
+                    failed++;
+                    logTest(name, false, result.message);
+                }
+            } catch (e) {
+                failed++;
+                logTest(name, false, `Exception: ${e.message}\n${e.stack}`);
+            }
+        }
+
+        function logTest(name, pass, message) {
+            tests.push({ name, pass, message });
+        }
+
+        function assert(condition, message) {
+            return { pass: condition, message };
+        }
+
+        function assertApprox(actual, expected, tolerance, unit) {
+            const diff = Math.abs(actual - expected);
+            const pass = diff <= tolerance;
+            return {
+                pass,
+                message: `Expected: ${expected}${unit}, Got: ${actual.toFixed(2)}${unit}, Diff: ${diff.toFixed(2)}${unit} (tolerance: ${tolerance}${unit})`
+            };
+        }
+
+        function assertRange(value, min, max, unit, label) {
+            const pass = value >= min && value <= max;
+            return {
+                pass,
+                message: `${label}: ${value.toFixed(2)}${unit} (expected ${min}-${max}${unit})`
+            };
+        }
+
+        // Timezone conversion helpers (copied from app.js)
+        function parseTimeInTimezone(localTimeStr, timezone, year, month, day, hour, minute) {
+            try {
+                let utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+
+                const formatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: timezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+
+                const parts = formatter.formatToParts(utcGuess);
+                const tzYear = parseInt(parts.find(p => p.type === 'year').value);
+                const tzMonth = parseInt(parts.find(p => p.type === 'month').value);
+                const tzDay = parseInt(parts.find(p => p.type === 'day').value);
+                const tzHour = parseInt(parts.find(p => p.type === 'hour').value);
+                const tzMinute = parseInt(parts.find(p => p.type === 'minute').value);
+
+                const wantedUTC = Date.UTC(year, month - 1, day, hour, minute, 0);
+                const gotUTC = Date.UTC(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, 0);
+                const diff = wantedUTC - gotUTC;
+
+                return new Date(utcGuess.getTime() + diff);
+            } catch (e) {
+                console.error('Timezone parsing error:', e);
+                return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+            }
+        }
+
+        // Run tests
+        console.log('Starting tests...');
+
+        // Test 1: Timezone conversion for Pacific time
+        test('Timezone conversion: 10:00 AM Pacific -> UTC', () => {
+            const date = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 10, 0);
+            const utcHour = date.getUTCHours();
+            // 10 AM PST (UTC-8) should be 18:00 UTC
+            return assertApprox(utcHour, 18, 1, ' hours');
+        });
+
+        // Test 2: Sunrise time in Seattle on Jan 10, 2026
+        test('Sunrise time in Seattle (Jan 10, 2026)', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+
+            // Test around expected sunrise time (7:54 AM)
+            const sunriseTime = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 7, 54);
+            const sunPos = Astronomy.getSunPosition(sunriseTime, seattle.lat, seattle.lng);
+
+            // At sunrise, altitude should be close to 0 (within a few degrees)
+            return assertRange(sunPos.altitude, -2, 2, '°', 'Sun altitude at ~7:54 AM');
+        });
+
+        // Test 3: Sun position at sunrise (should be in the east and rising)
+        test('Sun is in the east at sunrise', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+            const sunriseTime = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 7, 54);
+            const sunPos = Astronomy.getSunPosition(sunriseTime, seattle.lat, seattle.lng);
+
+            // Azimuth should be in the eastern range (90° ± some degrees for winter)
+            // In winter in Seattle, sunrise is actually southeast, around 120-130°
+            return assertRange(sunPos.azimuth, 100, 140, '°', 'Sun azimuth at sunrise');
+        });
+
+        // Test 4: Sun is rising at sunrise
+        test('Sun is rising at sunrise', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+            const sunriseTime = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 7, 54);
+
+            // Check position 5 minutes before and after
+            const before = new Date(sunriseTime.getTime() - 5 * 60 * 1000);
+            const after = new Date(sunriseTime.getTime() + 5 * 60 * 1000);
+
+            const posBefore = Astronomy.getSunPosition(before, seattle.lat, seattle.lng);
+            const posAfter = Astronomy.getSunPosition(after, seattle.lat, seattle.lng);
+
+            const isRising = posAfter.altitude > posBefore.altitude;
+            return assert(isRising,
+                `Before: ${posBefore.altitude.toFixed(2)}°, After: ${posAfter.altitude.toFixed(2)}° - ${isRising ? 'RISING ✓' : 'NOT RISING ✗'}`);
+        });
+
+        // Test 5: Sunset time in Seattle on Jan 10, 2026
+        test('Sunset time in Seattle (Jan 10, 2026)', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+
+            // Test around expected sunset time (4:38 PM)
+            const sunsetTime = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 16, 38);
+            const sunPos = Astronomy.getSunPosition(sunsetTime, seattle.lat, seattle.lng);
+
+            // At sunset, altitude should be close to 0 (within a few degrees)
+            return assertRange(sunPos.altitude, -2, 2, '°', 'Sun altitude at ~4:38 PM');
+        });
+
+        // Test 6: Sun position at sunset (should be in the west)
+        test('Sun is in the west at sunset', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+            const sunsetTime = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 16, 38);
+            const sunPos = Astronomy.getSunPosition(sunsetTime, seattle.lat, seattle.lng);
+
+            // Azimuth should be in the western range (270° ± some degrees for winter)
+            // In winter in Seattle, sunset is actually southwest, around 230-250°
+            return assertRange(sunPos.azimuth, 220, 260, '°', 'Sun azimuth at sunset');
+        });
+
+        // Test 7: Sun is setting at sunset
+        test('Sun is setting at sunset', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+            const sunsetTime = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 16, 38);
+
+            // Check position 5 minutes before and after
+            const before = new Date(sunsetTime.getTime() - 5 * 60 * 1000);
+            const after = new Date(sunsetTime.getTime() + 5 * 60 * 1000);
+
+            const posBefore = Astronomy.getSunPosition(before, seattle.lat, seattle.lng);
+            const posAfter = Astronomy.getSunPosition(after, seattle.lat, seattle.lng);
+
+            const isSetting = posAfter.altitude < posBefore.altitude;
+            return assert(isSetting,
+                `Before: ${posBefore.altitude.toFixed(2)}°, After: ${posAfter.altitude.toFixed(2)}° - ${isSetting ? 'SETTING ✓' : 'NOT SETTING ✗'}`);
+        });
+
+        // Test 8: Noon sun position (should be high and south)
+        test('Sun is high and south at noon', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+            const noonTime = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 12, 0);
+            const sunPos = Astronomy.getSunPosition(noonTime, seattle.lat, seattle.lng);
+
+            // At solar noon in January in Seattle, sun should be:
+            // - South-ish (azimuth around 180°, give or take due to solar vs clock noon)
+            // - Altitude around 15-20° (low in winter)
+            const azimuthOk = sunPos.azimuth > 160 && sunPos.azimuth < 200;
+            const altitudeOk = sunPos.altitude > 10 && sunPos.altitude < 25;
+
+            return assert(azimuthOk && altitudeOk,
+                `Azimuth: ${sunPos.azimuth.toFixed(2)}° (160-200), Altitude: ${sunPos.altitude.toFixed(2)}° (10-25) - ${azimuthOk && altitudeOk ? 'OK ✓' : 'FAIL ✗'}`);
+        });
+
+        // Test 9: Verify 4:30 PM is before sunset (sun should still be above horizon)
+        test('Sun is still up at 4:30 PM', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+            const time430pm = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 16, 30);
+            const sunPos = Astronomy.getSunPosition(time430pm, seattle.lat, seattle.lng);
+
+            // Should be close to horizon but still slightly above (sunset is 4:38)
+            return assertRange(sunPos.altitude, -0.5, 2, '°', 'Sun altitude at 4:30 PM');
+        });
+
+        // Test 10: Verify 5:00 PM is after sunset (sun should be below horizon)
+        test('Sun is down at 5:00 PM', () => {
+            const seattle = { lat: 47.6062, lng: -122.3321 };
+            const time5pm = parseTimeInTimezone(null, 'America/Los_Angeles', 2026, 1, 10, 17, 0);
+            const sunPos = Astronomy.getSunPosition(time5pm, seattle.lat, seattle.lng);
+
+            // Should be below horizon
+            return assert(sunPos.altitude < 0,
+                `Sun altitude: ${sunPos.altitude.toFixed(2)}° - ${sunPos.altitude < 0 ? 'Below horizon ✓' : 'Still above horizon ✗'}`);
+        });
+
+        // Display results
+        const resultsDiv = document.getElementById('results');
+        tests.forEach(test => {
+            const testDiv = document.createElement('div');
+            testDiv.className = `test ${test.pass ? 'pass' : 'fail'}`;
+            testDiv.innerHTML = `
+                <div class="test-name">${test.pass ? '✓' : '✗'} ${test.name}</div>
+                <div class="test-detail">${test.message}</div>
+            `;
+            resultsDiv.appendChild(testDiv);
+        });
+
+        // Display summary
+        const summaryDiv = document.getElementById('summary');
+        summaryDiv.innerHTML = `
+            <h2>Summary</h2>
+            <div>Total: ${tests.length}</div>
+            <div style="color: #0f0">Passed: ${passed}</div>
+            <div style="color: #f00">Failed: ${failed}</div>
+            <div style="margin-top: 10px; font-size: 18px; font-weight: bold; color: ${failed === 0 ? '#0f0' : '#f00'}">
+                ${failed === 0 ? 'ALL TESTS PASSED! ✓' : 'SOME TESTS FAILED ✗'}
+            </div>
+        `;
+
+        console.log(`Tests complete: ${passed} passed, ${failed} failed`);
+    </script>
+</body>
+</html>
