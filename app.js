@@ -124,13 +124,13 @@ const app = {
         const [hour, minute] = timePart.split(':').map(Number);
 
         try {
-            // Create a date string in ISO format that the Date constructor will interpret
-            // We want to find the UTC time that corresponds to this local time in the given timezone
+            // We want to find the UTC time that corresponds to the given local time in the specified timezone
+            // Strategy: Start with a UTC guess, see what time it is in the target timezone, then adjust
 
-            // Start with a guess: interpret as UTC
+            // Initial guess: interpret the input as UTC
             let utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
 
-            // Format this UTC time in the target timezone
+            // Now see what time this UTC moment is in the target timezone
             const formatter = new Intl.DateTimeFormat('en-US', {
                 timeZone: timezone,
                 year: 'numeric',
@@ -148,12 +148,13 @@ const app = {
             const tzHour = parseInt(parts.find(p => p.type === 'hour').value);
             const tzMinute = parseInt(parts.find(p => p.type === 'minute').value);
 
-            // Calculate the difference between what we want and what we got
-            const wantedTime = new Date(year, month - 1, day, hour, minute, 0).getTime();
-            const gotTime = new Date(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, 0).getTime();
-            const diff = wantedTime - gotTime;
+            // Calculate the difference (in milliseconds) between what we want and what we got
+            // Both calculations use UTC to be timezone-independent
+            const wantedUTC = Date.UTC(year, month - 1, day, hour, minute, 0);
+            const gotUTC = Date.UTC(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, 0);
+            const diff = wantedUTC - gotUTC;
 
-            // Apply the correction
+            // Apply the correction to our guess
             return new Date(utcGuess.getTime() + diff);
         } catch (e) {
             console.error('Timezone parsing error:', e);
