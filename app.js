@@ -65,7 +65,7 @@ const app = {
         this.canvas.addEventListener('mousemove', (e) => {
             if (this.dragStart) {
                 const delta = e.clientX - this.dragStart.x;
-                this.viewAzimuth = this.dragStart.azimuth - (delta / this.canvasWidth) * 120;
+                this.viewAzimuth = this.dragStart.azimuth - (delta / this.canvasWidth) * 360;
                 this.viewAzimuth = ((this.viewAzimuth % 360) + 360) % 360;
                 this.updateViewAzimuthDisplay();
                 this.update();
@@ -92,7 +92,7 @@ const app = {
             if (this.dragStart) {
                 const touch = e.touches[0];
                 const delta = touch.clientX - this.dragStart.x;
-                this.viewAzimuth = this.dragStart.azimuth - (delta / this.canvasWidth) * 120;
+                this.viewAzimuth = this.dragStart.azimuth - (delta / this.canvasWidth) * 360;
                 this.viewAzimuth = ((this.viewAzimuth % 360) + 360) % 360;
                 this.updateViewAzimuthDisplay();
                 this.update();
@@ -325,24 +325,23 @@ const app = {
         // Draw grid
         this.drawGrid(ctx, width, height);
 
-        // Draw sun
-        if (this.isInView(sunPos.azimuth) && sunPos.altitude > -5) {
+        // Draw sun (now shows full 360 degrees)
+        if (sunPos.altitude > -5) {
             this.drawSun(ctx, width, height, sunPos);
         }
 
-        // Draw moon
-        if (this.isInView(moonPos.azimuth) && moonPos.altitude > -5) {
+        // Draw moon (now shows full 360 degrees)
+        if (moonPos.altitude > -5) {
             this.drawMoon(ctx, width, height, moonPos, moonIllum);
         }
 
-        // Draw labels
-        this.drawLabels(ctx, width, height, sunPos, moonPos);
+        // Labels removed for cleaner display
     },
 
     drawSky(ctx, width, height, sunAltitude) {
         // Create gradient based on sun altitude
         let skyGradient;
-        const horizonY = height * 0.6;
+        const horizonY = height * 0.85; // Moved down to show more sky
 
         if (sunAltitude > 0) {
             // Daytime - blue sky
@@ -375,7 +374,7 @@ const app = {
     },
 
     drawHorizon(ctx, width, height) {
-        const horizonY = height * 0.6;
+        const horizonY = height * 0.85;
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -385,12 +384,16 @@ const app = {
     },
 
     drawCompass(ctx, width, height) {
-        const horizonY = height * 0.6;
+        const horizonY = height * 0.85;
         const directions = [
             { angle: 0, label: 'N' },
+            { angle: 45, label: 'NE' },
             { angle: 90, label: 'E' },
+            { angle: 135, label: 'SE' },
             { angle: 180, label: 'S' },
-            { angle: 270, label: 'W' }
+            { angle: 225, label: 'SW' },
+            { angle: 270, label: 'W' },
+            { angle: 315, label: 'NW' }
         ];
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
@@ -398,15 +401,13 @@ const app = {
         ctx.textAlign = 'center';
 
         directions.forEach(dir => {
-            if (this.isInView(dir.angle)) {
-                const x = this.azimuthToX(dir.angle, width);
-                ctx.fillText(dir.label, x, horizonY + 20);
-            }
+            const x = this.azimuthToX(dir.angle, width);
+            ctx.fillText(dir.label, x, horizonY + 20);
         });
     },
 
     drawGrid(ctx, width, height) {
-        const horizonY = height * 0.6;
+        const horizonY = height * 0.85;
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.lineWidth = 1;
 
@@ -432,7 +433,7 @@ const app = {
     },
 
     drawSun(ctx, width, height, sunPos) {
-        const horizonY = height * 0.6;
+        const horizonY = height * 0.85;
         const x = this.azimuthToX(sunPos.azimuth, width);
         const y = this.altitudeToY(sunPos.altitude, horizonY);
 
@@ -463,7 +464,7 @@ const app = {
     },
 
     drawMoon(ctx, width, height, moonPos, moonIllum) {
-        const horizonY = height * 0.6;
+        const horizonY = height * 0.85;
         const x = this.azimuthToX(moonPos.azimuth, width);
         const y = this.altitudeToY(moonPos.altitude, horizonY);
 
@@ -546,10 +547,8 @@ const app = {
     },
 
     isInView(azimuth) {
-        // Check if azimuth is within 60 degrees of view center
-        let diff = Math.abs(azimuth - this.viewAzimuth);
-        if (diff > 180) diff = 360 - diff;
-        return diff <= 60;
+        // Now showing full 360 degrees - everything is in view
+        return true;
     },
 
     azimuthToX(azimuth, width) {
@@ -558,8 +557,8 @@ const app = {
         if (relativeAz > 180) relativeAz -= 360;
         if (relativeAz < -180) relativeAz += 360;
 
-        // Map -60 to 60 degrees to 0 to width
-        return width / 2 + (relativeAz / 120) * width;
+        // Map -180 to 180 degrees to 0 to width (full 360 degree view)
+        return width / 2 + (relativeAz / 360) * width;
     },
 
     altitudeToY(altitude, horizonY) {
