@@ -486,15 +486,30 @@ const app = {
             ctx.fillStyle = 'rgba(0, 0, 50, 0.7)';
             ctx.beginPath();
 
-            const phaseAngle = moonIllum.angle * Math.PI / 180;
             if (moonIllum.phase < 0.5) {
                 // Waxing - shadow on left
                 ctx.arc(x, y, 15, Math.PI / 2, -Math.PI / 2, false);
-                ctx.ellipse(x, y, 15 * (1 - moonIllum.fraction * 2), 15, 0, -Math.PI / 2, Math.PI / 2, false);
+                if (moonIllum.fraction <= 0.5) {
+                    // Crescent: ellipse curves toward illuminated side (right)
+                    const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
+                    ctx.ellipse(x, y, ellipseWidth, 15, 0, -Math.PI / 2, Math.PI / 2, false);
+                } else {
+                    // Gibbous: ellipse curves toward shadow side (left)
+                    const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
+                    ctx.ellipse(x, y, ellipseWidth, 15, 0, -Math.PI / 2, Math.PI / 2, true);
+                }
             } else {
                 // Waning - shadow on right
                 ctx.arc(x, y, 15, -Math.PI / 2, Math.PI / 2, false);
-                ctx.ellipse(x, y, 15 * ((moonIllum.fraction - 0.5) * 2), 15, 0, Math.PI / 2, -Math.PI / 2, false);
+                if (moonIllum.fraction <= 0.5) {
+                    // Crescent: ellipse curves toward illuminated side (left)
+                    const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
+                    ctx.ellipse(x, y, ellipseWidth, 15, 0, Math.PI / 2, -Math.PI / 2, false);
+                } else {
+                    // Gibbous: ellipse curves toward shadow side (right)
+                    const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
+                    ctx.ellipse(x, y, ellipseWidth, 15, 0, Math.PI / 2, -Math.PI / 2, true);
+                }
             }
             ctx.fill();
         }
