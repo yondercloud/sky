@@ -40,9 +40,22 @@ const app = {
     setupEventListeners() {
         // Time input change
         document.getElementById('current-time').addEventListener('change', (e) => {
-            this.currentTime = new Date(e.target.value);
+            // Interpret the datetime-local value as being in the selected timezone
+            const timezone = document.getElementById('timezone').value;
+            const localTimeStr = e.target.value;
+            this.currentTime = this.parseTimeInTimezone(localTimeStr, timezone);
             this.update();
         });
+
+        // Timezone change
+        document.getElementById('timezone').addEventListener('change', () => {
+            this.updateTimeInput();
+            this.update();
+        });
+
+        // Location change
+        document.getElementById('latitude').addEventListener('change', () => this.update());
+        document.getElementById('longitude').addEventListener('change', () => this.update());
 
         // Canvas drag to pan
         this.canvas.addEventListener('mousedown', (e) => {
@@ -98,8 +111,86 @@ const app = {
     },
 
     updateTimeInput() {
-        const timeStr = this.currentTime.toISOString().slice(0, 16);
+        const timezone = document.getElementById('timezone').value;
+        const timeStr = this.formatTimeInTimezone(this.currentTime, timezone);
         document.getElementById('current-time').value = timeStr;
+    },
+
+    // Convert a datetime-local string in a specific timezone to UTC Date object
+    parseTimeInTimezone(localTimeStr, timezone) {
+        // Parse the YYYY-MM-DDTHH:mm string
+        const [datePart, timePart] = localTimeStr.split('T');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute] = timePart.split(':').map(Number);
+
+        // Create a date string that will be interpreted in the target timezone
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+
+        try {
+            // Use Intl.DateTimeFormat to handle timezone conversion
+            // Create a date assuming UTC first
+            const utcDate = new Date(dateStr + 'Z');
+
+            // Get the offset for this timezone at this date
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+
+            // Parse back the formatted date to get offset
+            const parts = formatter.formatToParts(utcDate);
+            const tzYear = parts.find(p => p.type === 'year').value;
+            const tzMonth = parts.find(p => p.type === 'month').value;
+            const tzDay = parts.find(p => p.type === 'day').value;
+            const tzHour = parts.find(p => p.type === 'hour').value;
+            const tzMinute = parts.find(p => p.type === 'minute').value;
+
+            // Calculate the offset
+            const tzDate = new Date(`${tzYear}-${tzMonth}-${tzDay}T${tzHour}:${tzMinute}:00Z`);
+            const offset = utcDate - tzDate;
+
+            // Now create the actual date we want
+            const targetDate = new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`);
+            return new Date(targetDate.getTime() - offset);
+        } catch (e) {
+            console.error('Timezone parsing error:', e);
+            // Fallback to treating as UTC
+            return new Date(dateStr + 'Z');
+        }
+    },
+
+    // Format a UTC Date object as a datetime-local string in a specific timezone
+    formatTimeInTimezone(date, timezone) {
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+
+            const parts = formatter.formatToParts(date);
+            const year = parts.find(p => p.type === 'year').value;
+            const month = parts.find(p => p.type === 'month').value;
+            const day = parts.find(p => p.type === 'day').value;
+            const hour = parts.find(p => p.type === 'hour').value;
+            const minute = parts.find(p => p.type === 'minute').value;
+
+            return `${year}-${month}-${day}T${hour}:${minute}`;
+        } catch (e) {
+            console.error('Timezone formatting error:', e);
+            // Fallback to ISO string
+            return date.toISOString().slice(0, 16);
+        }
     },
 
     adjustTime(hours) {
@@ -171,11 +262,36 @@ const app = {
         const moonPos = Astronomy.getMoonPosition(this.currentTime, lat, lng);
         const moonIllum = Astronomy.getMoonIllumination(this.currentTime);
 
+        // Update time display
+        this.updateLocalTimeDisplay();
+
         // Update info display
         this.updateInfo(sunPos, moonPos, moonIllum);
 
         // Render the sky
         this.render(sunPos, moonPos, moonIllum);
+    },
+
+    updateLocalTimeDisplay() {
+        const timezone = document.getElementById('timezone').value;
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            const timeStr = formatter.format(this.currentTime);
+            document.getElementById('local-time-display').textContent = timeStr;
+        } catch (e) {
+            console.error('Error formatting local time:', e);
+            document.getElementById('local-time-display').textContent = this.currentTime.toLocaleString();
+        }
     },
 
     updateInfo(sunPos, moonPos, moonIllum) {
