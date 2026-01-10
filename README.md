@@ -30,7 +30,7 @@ Simply open `index.html` in a web browser. No build process or server required.
 
 ### Default Location
 
-The app defaults to New York City (40.7128°N, 74.0060°W). Update the latitude and longitude fields to view the sky from your location.
+The app defaults to Bellevue, WA (47.6101°N, 122.2015°W) in the Pacific timezone. Update the latitude and longitude fields to view the sky from your location.
 
 ## Technical Details
 
