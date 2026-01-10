@@ -33,7 +33,7 @@ const Astronomy = {
 
     // Calculate Moon position (azimuth and altitude)
     getMoonPosition(date, lat, lng) {
-        const lw = -lng * this.RAD;
+        const lw = lng * this.RAD; // Changed: removed negation - west is already negative
         const phi = lat * this.RAD;
         const d = this.toJulian(date) - this.J2000;
 
@@ -135,7 +135,9 @@ const Astronomy = {
 
     // Helper: Get sidereal time
     getSiderealTime(d, lw) {
-        return (280.16 + 360.9856235 * d) * this.RAD - lw;
+        const degrees = 280.16 + 360.9856235 * d;
+        const normalized = ((degrees % 360) + 360) % 360; // Normalize to 0-360°
+        return normalized * this.RAD + lw; // Changed: + lw to correctly add longitude offset
     },
 
     // Helper: Calculate azimuth from hour angle

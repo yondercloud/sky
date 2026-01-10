@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timezone Debug</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+        h2 { color: #ffd700; }
+        .debug-line {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .highlight {
+            color: #0ff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Timezone Conversion Debug</h1>
+    <div id="output"></div>
+
+    <script src="astronomy.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        function log(html) {
+            const div = document.createElement('div');
+            div.className = 'section';
+            div.innerHTML = html;
+            output.appendChild(div);
+        }
+
+        // Copy the parseTimeInTimezone function from app.js
+        function parseTimeInTimezone(localTimeStr, timezone) {
+            const [datePart, timePart] = localTimeStr.split('T');
+            const [year, month, day] = datePart.split('-').map(Number);
+            const [hour, minute] = timePart.split(':').map(Number);
+
+            log(`<h2>Parsing: ${localTimeStr} in ${timezone}</h2>`);
+            log(`<div class="debug-line">Input: ${year}-${month}-${day} ${hour}:${minute}</div>`);
+
+            try {
+                let utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+                log(`<div class="debug-line">Initial UTC guess: ${utcGuess.toISOString()}</div>`);
+
+                const formatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: timezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+
+                const parts = formatter.formatToParts(utcGuess);
+                const tzYear = parseInt(parts.find(p => p.type === 'year').value);
+                const tzMonth = parseInt(parts.find(p => p.type === 'month').value);
+                const tzDay = parseInt(parts.find(p => p.type === 'day').value);
+                const tzHour = parseInt(parts.find(p => p.type === 'hour').value);
+                const tzMinute = parseInt(parts.find(p => p.type === 'minute').value);
+
+                log(`<div class="debug-line">UTC guess formatted in ${timezone}: ${tzYear}-${tzMonth}-${tzDay} ${tzHour}:${tzMinute}</div>`);
+
+                const wantedUTC = Date.UTC(year, month - 1, day, hour, minute, 0);
+                const gotUTC = Date.UTC(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, 0);
+                const diff = wantedUTC - gotUTC;
+
+                log(`<div class="debug-line">Wanted (as UTC): ${new Date(wantedUTC).toISOString()}</div>`);
+                log(`<div class="debug-line">Got (as UTC): ${new Date(gotUTC).toISOString()}</div>`);
+                log(`<div class="debug-line">Difference: ${diff / (1000 * 60 * 60)} hours</div>`);
+
+                const result = new Date(utcGuess.getTime() + diff);
+                log(`<div class="debug-line highlight">Final UTC result: ${result.toISOString()}</div>`);
+
+                // Verify by formatting back
+                const verify = formatter.format(result);
+                log(`<div class="debug-line highlight">Verify (format result in ${timezone}): ${verify}</div>`);
+
+                return result;
+            } catch (e) {
+                log(`<div class="debug-line" style="color: #f00">Error: ${e.message}</div>`);
+                return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+            }
+        }
+
+        // Test case 1: 7:54 AM Pacific on Jan 10, 2026 (sunrise)
+        log('<h1>Test 1: Sunrise Time (7:54 AM Pacific)</h1>');
+        const sunriseDate = parseTimeInTimezone('2026-01-10T07:54', 'America/Los_Angeles');
+        const seattle = { lat: 47.6062, lng: -122.3321 };
+        const sunrisePos = Astronomy.getSunPosition(sunriseDate, seattle.lat, seattle.lng);
+        log(`<div class="debug-line highlight">Sun Position at sunrise: Azimuth=${sunrisePos.azimuth.toFixed(2)}°, Altitude=${sunrisePos.altitude.toFixed(2)}°</div>`);
+
+        // Test case 2: 4:38 PM Pacific on Jan 10, 2026 (sunset)
+        log('<h1>Test 2: Sunset Time (4:38 PM Pacific)</h1>');
+        const sunsetDate = parseTimeInTimezone('2026-01-10T16:38', 'America/Los_Angeles');
+        const sunsetPos = Astronomy.getSunPosition(sunsetDate, seattle.lat, seattle.lng);
+        log(`<div class="debug-line highlight">Sun Position at sunset: Azimuth=${sunsetPos.azimuth.toFixed(2)}°, Altitude=${sunsetPos.altitude.toFixed(2)}°</div>`);
+
+        // Test case 3: 12:00 PM Pacific on Jan 10, 2026 (noon)
+        log('<h1>Test 3: Noon Time (12:00 PM Pacific)</h1>');
+        const noonDate = parseTimeInTimezone('2026-01-10T12:00', 'America/Los_Angeles');
+        const noonPos = Astronomy.getSunPosition(noonDate, seattle.lat, seattle.lng);
+        log(`<div class="debug-line highlight">Sun Position at noon: Azimuth=${noonPos.azimuth.toFixed(2)}°, Altitude=${noonPos.altitude.toFixed(2)}°</div>`);
+
+        // Test case 4: What the app might be showing at 4:30 PM
+        log('<h1>Test 4: 4:30 PM Pacific</h1>');
+        const test430 = parseTimeInTimezone('2026-01-10T16:30', 'America/Los_Angeles');
+        const pos430 = Astronomy.getSunPosition(test430, seattle.lat, seattle.lng);
+        log(`<div class="debug-line highlight">Sun Position at 4:30 PM: Azimuth=${pos430.azimuth.toFixed(2)}°, Altitude=${pos430.altitude.toFixed(2)}°</div>`);
+        log(`<div class="debug-line">Expected: Near horizon (altitude ≈ 0-1°), in the west (azimuth ≈ 230-250°)</div>`);
+
+        // Test what time would show the sun rising in the east
+        log('<h1>Test 5: Find when sun is at altitude 0 and azimuth ~120° (actual sunrise)</h1>');
+        for (let hour = 0; hour < 24; hour++) {
+            for (let minute = 0; minute < 60; minute += 15) {
+                const testDate = parseTimeInTimezone(`2026-01-10T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`, 'America/Los_Angeles');
+                const testPos = Astronomy.getSunPosition(testDate, seattle.lat, seattle.lng);
+                if (Math.abs(testPos.altitude) < 1 && testPos.azimuth > 100 && testPos.azimuth < 140) {
+                    log(`<div class="debug-line highlight">Found sunrise candidate: ${hour}:${String(minute).padStart(2, '0')} Pacific - Alt=${testPos.altitude.toFixed(2)}°, Az=${testPos.azimuth.toFixed(2)}°</div>`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
