@@ -258,7 +258,7 @@ const app = {
             this.currentTime = new Date(this.currentTime.getTime() + speed * 60 * 1000);
             this.updateTimeInput();
             this.update();
-        }, 1000);
+        }, 40);
     },
 
     stopAnimation() {
