@@ -325,6 +325,25 @@ const app = {
             `${Math.round(moonPos.altitude)}°`;
         document.getElementById('moon-phase').textContent =
             `${Astronomy.getMoonPhaseName(moonIllum.phase)} (${Math.round(moonIllum.fraction * 100)}%)`;
+
+        // Update date/time in info display
+        const timezone = document.getElementById('timezone').value;
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            document.getElementById('info-datetime').textContent = formatter.format(this.currentTime);
+        } catch (e) {
+            document.getElementById('info-datetime').textContent = this.currentTime.toLocaleString();
+        }
     },
 
     render(sunPos, moonPos, moonIllum) {
