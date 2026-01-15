@@ -511,8 +511,8 @@ const app = {
 
         // Use the parallactic angle from SunCalc, which represents the angle of the
         // moon's bright limb from the north point of the disk. Convert to radians and
-        // adjust for our canvas coordinate system (rotate by -90° to align with our axes)
-        const angleToSun = (moonIllum.angle - 90) * (Math.PI / 180);
+        // adjust for our canvas coordinate system (rotate by 90° to align with our axes)
+        const angleToSun = (moonIllum.angle + 90) * (Math.PI / 180);
 
         // Moon glow
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, 30);
