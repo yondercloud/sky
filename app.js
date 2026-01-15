@@ -509,12 +509,10 @@ const app = {
         const x = this.azimuthToX(moonPos.azimuth, width);
         const y = this.altitudeToY(moonPos.altitude, horizonY);
 
-        // Calculate sun position on canvas
-        const sunX = this.azimuthToX(sunPos.azimuth, width);
-        const sunY = this.altitudeToY(sunPos.altitude, horizonY);
-
-        // Calculate angle from moon to sun (this is the direction of illumination)
-        const angleToSun = Math.atan2(sunY - y, sunX - x);
+        // Use the parallactic angle from SunCalc, which represents the angle of the
+        // moon's bright limb from the north point of the disk. Convert to radians and
+        // adjust for our canvas coordinate system (rotate by -90° to align with our axes)
+        const angleToSun = (moonIllum.angle - 90) * (Math.PI / 180);
 
         // Moon glow
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, 30);
