@@ -373,7 +373,7 @@ const app = {
 
         // Draw moon (now shows full 360 degrees)
         if (moonPos.altitude > -5) {
-            this.drawMoon(ctx, width, height, moonPos, moonIllum);
+            this.drawMoon(ctx, width, height, moonPos, moonIllum, sunPos);
         }
 
         // Labels removed for cleaner display
@@ -504,10 +504,17 @@ const app = {
         }
     },
 
-    drawMoon(ctx, width, height, moonPos, moonIllum) {
+    drawMoon(ctx, width, height, moonPos, moonIllum, sunPos) {
         const horizonY = height * 0.85;
         const x = this.azimuthToX(moonPos.azimuth, width);
         const y = this.altitudeToY(moonPos.altitude, horizonY);
+
+        // Calculate sun position on canvas
+        const sunX = this.azimuthToX(sunPos.azimuth, width);
+        const sunY = this.altitudeToY(sunPos.altitude, horizonY);
+
+        // Calculate angle from moon to sun (this is the direction of illumination)
+        const angleToSun = Math.atan2(sunY - y, sunX - x);
 
         // Moon glow
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, 30);
@@ -529,28 +536,28 @@ const app = {
             ctx.beginPath();
 
             if (moonIllum.phase < 0.5) {
-                // Waxing - shadow on left
-                ctx.arc(x, y, 15, Math.PI / 2, -Math.PI / 2, false);
+                // Waxing - shadow on left (relative to sun direction)
+                ctx.arc(x, y, 15, angleToSun + Math.PI / 2, angleToSun - Math.PI / 2, false);
                 if (moonIllum.fraction <= 0.5) {
                     // Crescent: ellipse curves toward illuminated side (right)
                     const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
-                    ctx.ellipse(x, y, ellipseWidth, 15, 0, -Math.PI / 2, Math.PI / 2, false);
+                    ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, -Math.PI / 2, Math.PI / 2, false);
                 } else {
                     // Gibbous: ellipse curves toward shadow side (left)
                     const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
-                    ctx.ellipse(x, y, ellipseWidth, 15, 0, -Math.PI / 2, Math.PI / 2, true);
+                    ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, -Math.PI / 2, Math.PI / 2, true);
                 }
             } else {
-                // Waning - shadow on right
-                ctx.arc(x, y, 15, -Math.PI / 2, Math.PI / 2, false);
+                // Waning - shadow on right (relative to sun direction)
+                ctx.arc(x, y, 15, angleToSun - Math.PI / 2, angleToSun + Math.PI / 2, false);
                 if (moonIllum.fraction <= 0.5) {
                     // Crescent: ellipse curves toward illuminated side (left)
                     const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
-                    ctx.ellipse(x, y, ellipseWidth, 15, 0, Math.PI / 2, -Math.PI / 2, false);
+                    ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, Math.PI / 2, -Math.PI / 2, false);
                 } else {
                     // Gibbous: ellipse curves toward shadow side (right)
                     const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
-                    ctx.ellipse(x, y, ellipseWidth, 15, 0, Math.PI / 2, -Math.PI / 2, true);
+                    ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, Math.PI / 2, -Math.PI / 2, true);
                 }
             }
             ctx.fill();
