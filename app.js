@@ -540,35 +540,24 @@ const app = {
         ctx.fill();
 
         // Moon phase shadow
+        // The shadow is always on the side away from the sun, regardless of waxing/waning
         if (moonIllum.fraction < 0.99) {
             ctx.fillStyle = 'rgba(0, 0, 50, 0.7)';
             ctx.beginPath();
 
-            if (moonIllum.phase < 0.5) {
-                // Waxing - shadow on left (relative to sun direction)
-                ctx.arc(x, y, 15, angleToSun + Math.PI / 2, angleToSun - Math.PI / 2, false);
-                if (moonIllum.fraction <= 0.5) {
-                    // Crescent: ellipse curves toward illuminated side (right)
-                    const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
-                    ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, -Math.PI / 2, Math.PI / 2, false);
-                } else {
-                    // Gibbous: ellipse curves toward shadow side (left)
-                    const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
-                    ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, -Math.PI / 2, Math.PI / 2, true);
-                }
+            // Draw the back half of the moon (away from sun)
+            ctx.arc(x, y, 15, angleToSun + Math.PI / 2, angleToSun - Math.PI / 2, false);
+
+            if (moonIllum.fraction <= 0.5) {
+                // Crescent: shadow covers most of moon, ellipse curves toward sun
+                const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
+                ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, -Math.PI / 2, Math.PI / 2, false);
             } else {
-                // Waning - shadow on right (relative to sun direction)
-                ctx.arc(x, y, 15, angleToSun - Math.PI / 2, angleToSun + Math.PI / 2, false);
-                if (moonIllum.fraction <= 0.5) {
-                    // Crescent: ellipse curves toward illuminated side (left)
-                    const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
-                    ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, Math.PI / 2, -Math.PI / 2, false);
-                } else {
-                    // Gibbous: ellipse curves toward shadow side (right)
-                    const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
-                    ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, Math.PI / 2, -Math.PI / 2, true);
-                }
+                // Gibbous: shadow covers less of moon, ellipse curves away from sun
+                const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
+                ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, -Math.PI / 2, Math.PI / 2, true);
             }
+
             ctx.fill();
         }
     },
