@@ -373,7 +373,7 @@ const app = {
 
         // Draw moon (now shows full 360 degrees)
         if (moonPos.altitude > -5) {
-            this.drawMoon(ctx, width, height, moonPos, moonIllum);
+            this.drawMoon(ctx, width, height, moonPos, moonIllum, sunPos);
         }
 
         // Labels removed for cleaner display
@@ -504,10 +504,18 @@ const app = {
         }
     },
 
-    drawMoon(ctx, width, height, moonPos, moonIllum) {
+    drawMoon(ctx, width, height, moonPos, moonIllum, sunPos) {
         const horizonY = height * 0.85;
         const x = this.azimuthToX(moonPos.azimuth, width);
         const y = this.altitudeToY(moonPos.altitude, horizonY);
+
+        // Calculate sun position to determine the direction of the moon's shadow
+        const sunX = this.azimuthToX(sunPos.azimuth, width);
+        const sunY = this.altitudeToY(sunPos.altitude, horizonY);
+
+        // Calculate the angle from moon to sun based on their actual positions in the sky
+        // This gives us the correct orientation that changes as sun/moon move across the sky
+        const angleToSun = Math.atan2(sunY - y, sunX - x);
 
         // Moon glow
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, 30);
@@ -524,35 +532,24 @@ const app = {
         ctx.fill();
 
         // Moon phase shadow
+        // The shadow is always on the side away from the sun, regardless of waxing/waning
         if (moonIllum.fraction < 0.99) {
             ctx.fillStyle = 'rgba(0, 0, 50, 0.7)';
             ctx.beginPath();
 
-            if (moonIllum.phase < 0.5) {
-                // Waxing - shadow on left
-                ctx.arc(x, y, 15, Math.PI / 2, -Math.PI / 2, false);
-                if (moonIllum.fraction <= 0.5) {
-                    // Crescent: ellipse curves toward illuminated side (right)
-                    const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
-                    ctx.ellipse(x, y, ellipseWidth, 15, 0, -Math.PI / 2, Math.PI / 2, false);
-                } else {
-                    // Gibbous: ellipse curves toward shadow side (left)
-                    const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
-                    ctx.ellipse(x, y, ellipseWidth, 15, 0, -Math.PI / 2, Math.PI / 2, true);
-                }
+            // Draw the back half of the moon (away from sun)
+            ctx.arc(x, y, 15, angleToSun + Math.PI / 2, angleToSun - Math.PI / 2, false);
+
+            if (moonIllum.fraction <= 0.5) {
+                // Crescent: shadow covers most of moon, ellipse curves toward sun
+                const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
+                ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, -Math.PI / 2, Math.PI / 2, false);
             } else {
-                // Waning - shadow on right
-                ctx.arc(x, y, 15, -Math.PI / 2, Math.PI / 2, false);
-                if (moonIllum.fraction <= 0.5) {
-                    // Crescent: ellipse curves toward illuminated side (left)
-                    const ellipseWidth = 15 * (1 - moonIllum.fraction * 2);
-                    ctx.ellipse(x, y, ellipseWidth, 15, 0, Math.PI / 2, -Math.PI / 2, false);
-                } else {
-                    // Gibbous: ellipse curves toward shadow side (right)
-                    const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
-                    ctx.ellipse(x, y, ellipseWidth, 15, 0, Math.PI / 2, -Math.PI / 2, true);
-                }
+                // Gibbous: shadow covers less of moon, ellipse curves away from sun
+                const ellipseWidth = 15 * (moonIllum.fraction * 2 - 1);
+                ctx.ellipse(x, y, ellipseWidth, 15, angleToSun, -Math.PI / 2, Math.PI / 2, true);
             }
+
             ctx.fill();
         }
     },
