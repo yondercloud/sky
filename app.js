@@ -509,6 +509,18 @@ const app = {
         const x = this.azimuthToX(moonPos.azimuth, width);
         const y = this.altitudeToY(moonPos.altitude, horizonY);
 
+        // Calculate sun position for debug line
+        const sunX = this.azimuthToX(sunPos.azimuth, width);
+        const sunY = this.altitudeToY(sunPos.altitude, horizonY);
+
+        // DEBUG: Draw line from moon center to sun center
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(sunX, sunY);
+        ctx.stroke();
+
         // Use the parallactic angle from SunCalc, which represents the angle of the
         // moon's bright limb from the north point of the disk. Convert to radians and
         // adjust for our canvas coordinate system (rotate by 90° and negate for Y-axis flip)
