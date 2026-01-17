@@ -522,16 +522,6 @@ const app = {
         // Account for canvas coordinate system (y increases downward)
         const angleToSun = Math.atan2(-deltaAltitude, deltaAzimuth);
 
-        // DEBUG: Draw line from moon center to sun center
-        const sunX = this.azimuthToX(sunPos.azimuth, width);
-        const sunY = this.altitudeToY(sunPos.altitude, horizonY);
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(sunX, sunY);
-        ctx.stroke();
-
         // Moon glow
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, 30);
         gradient.addColorStop(0, 'rgba(220, 220, 255, 0.6)');
