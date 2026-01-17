@@ -514,6 +514,14 @@ const app = {
         const sunX = this.azimuthToX(sunPos.azimuth, width, true);
         const sunY = this.altitudeToY(sunPos.altitude, horizonY);
 
+        // DEBUG: Draw line from moon center to sun center
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(sunX, sunY);
+        ctx.stroke();
+
         // Calculate the angle from moon to sun based on their actual positions in the sky
         // This gives us the correct orientation that changes as sun/moon move across the sky
         const angleToSun = Math.atan2(sunY - y, sunX - x);
