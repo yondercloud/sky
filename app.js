@@ -509,22 +509,28 @@ const app = {
         const x = this.azimuthToX(moonPos.azimuth, width);
         const y = this.altitudeToY(moonPos.altitude, horizonY);
 
-        // Calculate sun position to determine the direction of the moon's shadow
-        // Skip wraparound adjustment for angle calculation to avoid edge cases
-        const sunX = this.azimuthToX(sunPos.azimuth, width, true);
-        const sunY = this.altitudeToY(sunPos.altitude, horizonY);
+        // Calculate the angle from moon to sun based on their actual sky positions
+        // (not screen positions) to avoid wraparound issues
+        let deltaAzimuth = sunPos.azimuth - moonPos.azimuth;
+        // Normalize to -180 to 180 range
+        if (deltaAzimuth > 180) deltaAzimuth -= 360;
+        if (deltaAzimuth < -180) deltaAzimuth += 360;
+
+        const deltaAltitude = sunPos.altitude - moonPos.altitude;
+
+        // Convert angular differences to canvas angle
+        // Account for canvas coordinate system (y increases downward)
+        const angleToSun = Math.atan2(-deltaAltitude, deltaAzimuth);
 
         // DEBUG: Draw line from moon center to sun center
+        const sunX = this.azimuthToX(sunPos.azimuth, width);
+        const sunY = this.altitudeToY(sunPos.altitude, horizonY);
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(sunX, sunY);
         ctx.stroke();
-
-        // Calculate the angle from moon to sun based on their actual positions in the sky
-        // This gives us the correct orientation that changes as sun/moon move across the sky
-        const angleToSun = Math.atan2(sunY - y, sunX - x);
 
         // Moon glow
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, 30);
