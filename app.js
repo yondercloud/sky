@@ -509,13 +509,18 @@ const app = {
         const x = this.azimuthToX(moonPos.azimuth, width);
         const y = this.altitudeToY(moonPos.altitude, horizonY);
 
-        // Calculate sun position to determine the direction of the moon's shadow
-        const sunX = this.azimuthToX(sunPos.azimuth, width);
-        const sunY = this.altitudeToY(sunPos.altitude, horizonY);
+        // Calculate the angle from moon to sun based on their actual sky positions
+        // (not screen positions) to avoid wraparound issues
+        let deltaAzimuth = sunPos.azimuth - moonPos.azimuth;
+        // Normalize to -180 to 180 range
+        if (deltaAzimuth > 180) deltaAzimuth -= 360;
+        if (deltaAzimuth < -180) deltaAzimuth += 360;
 
-        // Calculate the angle from moon to sun based on their actual positions in the sky
-        // This gives us the correct orientation that changes as sun/moon move across the sky
-        const angleToSun = Math.atan2(sunY - y, sunX - x);
+        const deltaAltitude = sunPos.altitude - moonPos.altitude;
+
+        // Convert angular differences to canvas angle
+        // Account for canvas coordinate system (y increases downward)
+        const angleToSun = Math.atan2(-deltaAltitude, deltaAzimuth);
 
         // Moon glow
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, 30);
@@ -589,11 +594,14 @@ const app = {
         return true;
     },
 
-    azimuthToX(azimuth, width) {
+    azimuthToX(azimuth, width, skipAdjustment = false) {
         // Map azimuth relative to view center to x position
         let relativeAz = azimuth - this.viewAzimuth;
-        if (relativeAz > 180) relativeAz -= 360;
-        if (relativeAz < -180) relativeAz += 360;
+
+        if (!skipAdjustment) {
+            if (relativeAz > 180) relativeAz -= 360;
+            if (relativeAz < -180) relativeAz += 360;
+        }
 
         // Map -180 to 180 degrees to 0 to width (full 360 degree view)
         return width / 2 + (relativeAz / 360) * width;
